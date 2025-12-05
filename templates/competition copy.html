@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2>{{ competition.name }}</h2>
+        <p>Дата: {{ competition.date }} | Место: {{ competition.location }}</p>
+        <p>Статус: {{ competition.status }} | Текущий раунд: {{ competition.current_round }}</p>
+    </div>
+</div>
+
+<div class="row">
+    {% for category, data in draw.items() %}
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Категория: {{ category }}</h5>
+            </div>
+            <div class="card-body">
+                <h6>Порядок выступления:</h6>
+                <ol>
+                    {% for athlete in data.athletes %}
+                    <li>{{ athlete.last_name }} {{ athlete.first_name }} ({{ athlete.club }})</li>
+                    {% endfor %}
+                </ol>
+                
+                <h6>Пары 1 раунда:</h6>
+                <table class="table table-sm">
+                    {% for pair in data.pairs %}
+                    <tr>
+                        <td>{{ pair[0].last_name if pair[0] else 'Свободный жребий' }}</td>
+                        <td>vs</td>
+                        <td>{{ pair[1].last_name if pair[1] else 'Свободный жребий' }}</td>
+                    </tr>
+                    {% endfor %}
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <h3>Ввод оценок</h3>
+        <form id="scoreForm">
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <label>Спортсмен:</label>
+                    <select id="athleteSelect" class="form-select" required>
+                        <option value="">Выберите спортсмена</option>
+                        {% for category, data in draw.items() %}
+                            {% for athlete in data.athletes %}
+                            <option value="{{ athlete.id }}">{{ athlete.last_name }} {{ athlete.first_name }}</option>
+                            {% endfor %}
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label>Раунд:</label>
+                    <select id="roundSelect" class="form-select" required>
+                        <option value="1">Раунд 1</option>
+                        <option value="2">Раунд 2</option>
+                        <option value="3">Раунд 3</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="row mb-3">
+                <h5>Оценки судей (0-10)</h5>
+                {% for i in range(5) %}
+                <div class="col-md-2">
+                    <label>Судья {{ i+1 }}:</label>
+                    <input type="number" class="form-control judge-score" 
+                           min="0" max="10" step="0.1" required>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Сохранить оценки</button>
+        </form>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <a href="{{ url_for('show_results', competition_id=competition.id) }}" 
+           class="btn btn-success">Показать результаты</a>
+        <a href="{{ url_for('export_excel', competition_id=competition.id) }}" 
+           class="btn btn-info">Экспорт в Excel</a>
+        <a href="{{ url_for('export_pdf', competition_id=competition.id) }}" 
+           class="btn btn-danger">Экспорт в PDF</a>
+    </div>
+</div>
+
+<script>
+document.getElementById('scoreForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const athleteId = document.getElementById('athleteSelect').value;
+    const roundNumber = document.getElementById('roundSelect').value;
+    const scores = Array.from(document.querySelectorAll('.judge-score'))
+        .map(input => parseFloat(input.value));
+    
+    fetch('/enter_scores', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            athlete_id: athleteId,
+            competition_id: competition.id,
+            round_number: roundNumber,
+            scores: scores
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Оценки сохранены! Средний балл: ${data.average.toFixed(2)}`);
+            document.getElementById('scoreForm').reset();
+        }
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,377 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2>
+                <i class="bi bi-trophy-fill"></i> 
+                Результаты соревнования: {{ competition.name }}
+            </h2>
+            <div>
+                <a href="{{ url_for('export_excel', competition_id=competition.id) }}" 
+                   class="btn btn-success">
+                    <i class="bi bi-file-earmark-excel"></i> Экспорт в Excel
+                </a>
+                <a href="{{ url_for('export_pdf', competition_id=competition.id) }}" 
+                   class="btn btn-danger">
+                    <i class="bi bi-file-earmark-pdf"></i> Экспорт в PDF
+                </a>
+            </div>
+        </div>
+        
+        <!-- Информация о соревновании -->
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">Информация о соревновании</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <strong>Дата:</strong> {{ competition.date.strftime('%d.%m.%Y') }}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Место:</strong> {{ competition.location or 'Не указано' }}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Статус:</strong>
+                        {% if competition.status == 'active' %}
+                            <span class="badge bg-success">Активно</span>
+                        {% elif competition.status == 'completed' %}
+                            <span class="badge bg-secondary">Завершено</span>
+                        {% else %}
+                            <span class="badge bg-warning">Ожидание</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-3">
+                        <strong>Раунд:</strong> {{ competition.current_round }}/3
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Фильтры и поиск -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-2">
+                        <input type="text" class="form-control" id="searchInput" 
+                               placeholder="Поиск по имени или клубу...">
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <select class="form-select" id="categoryFilter">
+                            <option value="">Все категории</option>
+                            {% set categories = [] %}
+                            {% for result in results %}
+                                {% if result.category not in categories %}
+                                    {% set _ = categories.append(result.category) %}
+                                    <option value="{{ result.category }}">{{ result.category }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 mb-2">
+                        <select class="form-select" id="sortBy">
+                            <option value="place">Сортировка по месту</option>
+                            <option value="name">Сортировка по имени</option>
+                            <option value="average">Сортировка по оценке</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Результаты по категориям -->
+        {% set results_by_category = {} %}
+        {% for result in results %}
+            {% if result.category not in results_by_category %}
+                {% set _ = results_by_category.update({result.category: []}) %}
+            {% endif %}
+            {% set _ = results_by_category[result.category].append(result) %}
+        {% endfor %}
+        
+        {% for category, cat_results in results_by_category.items() %}
+        <div class="card mb-4 category-section" data-category="{{ category }}">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-award"></i> Категория: {{ category }}
+                    <span class="badge bg-light text-dark float-end">
+                        {{ cat_results|length }} участников
+                    </span>
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped">
+                        <thead class="table-dark">
+                            <tr>
+                                <th width="80">Место</th>
+                                <th>Спортсмен</th>
+                                <th>Клуб</th>
+                                <th class="text-center">Раунд 1</th>
+                                <th class="text-center">Раунд 2</th>
+                                <th class="text-center">Раунд 3</th>
+                                <th class="text-center">Сумма</th>
+                                <th class="text-center">Среднее</th>
+                                <th class="text-center">Детали</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for result in cat_results %}
+                            <tr class="result-row" 
+                                data-name="{{ result.last_name }} {{ result.first_name }}"
+                                data-club="{{ result.club }}">
+                                <td>
+                                    {% if result.place == 1 %}
+                                        <span class="badge bg-warning text-dark fs-6">🥇 {{ result.place }}</span>
+                                    {% elif result.place == 2 %}
+                                        <span class="badge bg-secondary fs-6">🥈 {{ result.place }}</span>
+                                    {% elif result.place == 3 %}
+                                        <span class="badge bg-brown fs-6">🥉 {{ result.place }}</span>
+                                    {% else %}
+                                        <span class="badge bg-light text-dark">{{ result.place }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <strong>{{ result.last_name }} {{ result.first_name }}</strong>
+                                </td>
+                                <td>{{ result.club or '-' }}</td>
+                                <td class="text-center">
+                                    {% if result.round1 %}
+                                        <span class="badge bg-info">{{ "%.2f"|format(result.round1) }}</span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if result.round2 %}
+                                        <span class="badge bg-info">{{ "%.2f"|format(result.round2) }}</span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if result.round3 %}
+                                        <span class="badge bg-info">{{ "%.2f"|format(result.round3) }}</span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-success fs-6">{{ "%.2f"|format(result.total) }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-primary fs-6">{{ "%.2f"|format(result.average) }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <button class="btn btn-sm btn-outline-info" 
+                                            onclick="showAthleteDetails(result.athlete_id)">
+                                        <i class="bi bi-graph-up"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Пьедестал для топ-3 -->
+                {% set top3 = cat_results[:3] %}
+                {% if top3|length >= 3 %}
+                <div class="mt-4">
+                    <h6><i class="bi bi-trophy"></i> Пьедестал почета</h6>
+                    <div class="row text-center mt-3">
+                        <div class="col-md-4">
+                            <!-- 2 место -->
+                            <div class="p-3 bg-secondary bg-opacity-25 rounded">
+                                <div class="silver-medal mb-2">🥈</div>
+                                <h5>{{ top3[1].last_name }}</h5>
+                                <p class="mb-1">{{ top3[1].first_name }}</p>
+                                <p class="mb-1"><small>{{ top3[1].club }}</small></p>
+                                <h4 class="text-success">{{ "%.2f"|format(top3[1].average) }}</h4>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <!-- 1 место -->
+                            <div class="p-3 bg-warning bg-opacity-25 rounded">
+                                <div class="gold-medal mb-2">🥇</div>
+                                <h4>{{ top3[0].last_name }}</h4>
+                                <p class="mb-1">{{ top3[0].first_name }}</p>
+                                <p class="mb-1"><small>{{ top3[0].club }}</small></p>
+                                <h3 class="text-success">{{ "%.2f"|format(top3[0].average) }}</h3>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <!-- 3 место -->
+                            <div class="p-3 bg-brown bg-opacity-25 rounded">
+                                <div class="bronze-medal mb-2">🥉</div>
+                                <h5>{{ top3[2].last_name }}</h5>
+                                <p class="mb-1">{{ top3[2].first_name }}</p>
+                                <p class="mb-1"><small>{{ top3[2].club }}</small></p>
+                                <h4 class="text-success">{{ "%.2f"|format(top3[2].average) }}</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-bar-chart display-1 text-muted"></i>
+                <h3 class="mt-3">Результатов пока нет</h3>
+                <p class="text-muted">Оценки еще не введены или соревнование не начато.</p>
+                <a href="{{ url_for('view_competition', id=competition.id) }}" 
+                   class="btn btn-primary">
+                    <i class="bi bi-pencil-square"></i> Ввести оценки
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+        
+        <!-- Статистика -->
+        {% if results %}
+        <div class="card">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0"><i class="bi bi-speedometer2"></i> Статистика соревнования</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 text-center">
+                        <div class="display-6 text-primary">{{ results|length }}</div>
+                        <div class="text-muted">Всего участников</div>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        {% set avg_score = results|map(attribute='average')|sum / results|length %}
+                        <div class="display-6 text-success">{{ "%.2f"|format(avg_score) }}</div>
+                        <div class="text-muted">Средний балл</div>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        {% set max_score = results|map(attribute='average')|max %}
+                        <div class="display-6 text-warning">{{ "%.2f"|format(max_score) }}</div>
+                        <div class="text-muted">Максимальный балл</div>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        {% set min_score = results|map(attribute='average')|min %}
+                        <div class="display-6 text-info">{{ "%.2f"|format(min_score) }}</div>
+                        <div class="text-muted">Минимальный балл</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Модальное окно для деталей спортсмена -->
+<div class="modal fade" id="athleteModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">Детальная информация</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="athleteDetails">
+                Загрузка...
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.bg-brown {
+    background-color: #cd7f32 !important;
+    color: white;
+}
+
+.gold-medal { font-size: 3rem; }
+.silver-medal { font-size: 2.5rem; }
+.bronze-medal { font-size: 2.5rem; }
+
+.result-row:hover {
+    background-color: #f8f9fa;
+    cursor: pointer;
+}
+</style>
+
+<script>
+// Функции поиска и фильтрации
+document.getElementById('searchInput').addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase();
+    const rows = document.querySelectorAll('.result-row');
+    
+    rows.forEach(row => {
+        const name = row.getAttribute('data-name').toLowerCase();
+        const club = row.getAttribute('data-club').toLowerCase();
+        
+        if (name.includes(searchTerm) || club.includes(searchTerm)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+});
+
+document.getElementById('categoryFilter').addEventListener('change', function() {
+    const selectedCategory = this.value;
+    const categorySections = document.querySelectorAll('.category-section');
+    
+    categorySections.forEach(section => {
+        const sectionCategory = section.getAttribute('data-category');
+        
+        if (!selectedCategory || sectionCategory === selectedCategory) {
+            section.style.display = '';
+        } else {
+            section.style.display = 'none';
+        }
+    });
+});
+
+document.getElementById('sortBy').addEventListener('change', function() {
+    // Здесь можно добавить логику сортировки
+    alert('Сортировка будет реализована в следующей версии');
+});
+
+function showAthleteDetails(athleteId) {
+    // В реальном приложении здесь будет AJAX запрос к серверу
+    const details = `
+        <div class="text-center">
+            <i class="bi bi-person-circle display-1 text-primary"></i>
+            <h4 class="mt-3">Подробная статистика</h4>
+            <p>Детальная информация о выступлениях спортсмена</p>
+            
+            <div class="row mt-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5>По раундам</h5>
+                            <canvas id="roundsChart" width="200" height="100"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5>Оценки судей</h5>
+                            <canvas id="judgesChart" width="200" height="100"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('athleteDetails').innerHTML = details;
+    new bootstrap.Modal(document.getElementById('athleteModal')).show();
+}
+
+// Инициализация графиков (пример)
+function initCharts() {
+    // В реальном приложении здесь будут реальные данные
+    console.log('Графики будут инициализированы при загрузке данных');
+}
+
+document.addEventListener('DOMContentLoaded', initCharts);
+</script>
+{% endblock %}

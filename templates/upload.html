@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Загрузка спортсменов из Excel файла</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.excel_file.label }}</label>
+                        {{ form.excel_file(class="form-control") }}
+                        <div class="form-text">
+                            Поддерживаемые форматы: .xlsx, .xls<br>
+                            Файл должен содержать столбцы: Фамилия, Имя, Отчество, Дата рождения, Пол, Клуб, Номер
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        {{ form.submit(class="btn btn-primary") }}
+                        <a href="{{ url_for('index') }}" class="btn btn-secondary">Отмена</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">Пример файла</h5>
+            </div>
+            <div class="card-body">
+                <p>Создайте Excel файл со следующими столбцами:</p>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Столбец</th>
+                            <th>Описание</th>
+                            <th>Пример</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Фамилия</td><td>Фамилия спортсмена</td><td>Петров</td></tr>
+                        <tr><td>Имя</td><td>Имя спортсмена</td><td>Иван</td></tr>
+                        <tr><td>Отчество</td><td>Отчество спортсмена</td><td>Сергеевич</td></tr>
+                        <tr><td>Дата рождения</td><td>В формате ГГГГ-ММ-ДД</td><td>2000-05-15</td></tr>
+                        <tr><td>Пол</td><td>М или Ж</td><td>М</td></tr>
+                        <tr><td>Клуб</td><td>Название клуба</td><td>Спартак</td></tr>
+                        <tr><td>Номер</td><td>Регистрационный номер</td><td>001</td></tr>
+                    </tbody>
+                </table>
+                
+                <div class="alert alert-info">
+                    <strong>Совет:</strong> Вы можете скачать шаблон Excel файла, заполнить его и загрузить обратно.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,478 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h2 class="mb-4">
+            <i class="bi bi-printer-fill"></i> Формирование отчетов
+        </h2>
+        
+        <!-- Выбор соревнования -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Выберите соревнование для отчета</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="list-group">
+                            {% for competition in competitions %}
+                            <a href="#" class="list-group-item list-group-item-action competition-item"
+                               data-id="{{ competition.id }}"
+                               data-name="{{ competition.name }}"
+                               data-date="{{ competition.date.strftime('%d.%m.%Y') }}"
+                               data-location="{{ competition.location }}">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ competition.name }}</h6>
+                                    <small>
+                                        {% if competition.status == 'completed' %}
+                                            <span class="badge bg-success">Завершено</span>
+                                        {% elif competition.status == 'active' %}
+                                            <span class="badge bg-warning">В процессе</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Ожидание</span>
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                <small class="text-muted">
+                                    <i class="bi bi-calendar"></i> {{ competition.date.strftime('%d.%m.%Y') }} |
+                                    <i class="bi bi-geo-alt"></i> {{ competition.location or 'Не указано' }}
+                                </small>
+                            </a>
+                            {% else %}
+                            <div class="list-group-item">
+                                <div class="text-center py-3">
+                                    <i class="bi bi-calendar-x display-4 text-muted"></i>
+                                    <p class="mt-2">Нет доступных соревнований</p>
+                                    <a href="{{ url_for('create_competition') }}" class="btn btn-primary">
+                                        Создать соревнование
+                                    </a>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div id="competitionInfo" class="d-none">
+                            <div class="card">
+                                <div class="card-header bg-info text-white">
+                                    <h5 id="selectedName" class="mb-0"></h5>
+                                </div>
+                                <div class="card-body">
+                                    <p><strong>Дата:</strong> <span id="selectedDate"></span></p>
+                                    <p><strong>Место:</strong> <span id="selectedLocation"></span></p>
+                                    <p><strong>Статус:</strong> <span id="selectedStatus"></span></p>
+                                    
+                                    <hr>
+                                    
+                                    <h6>Выберите тип отчета:</h6>
+                                    <div class="row mt-3">
+                                        <div class="col-md-6 mb-2">
+                                            <button class="btn btn-outline-primary w-100 report-type" 
+                                                    data-type="full" data-bs-toggle="tooltip" 
+                                                    title="Полный отчет со всеми данными">
+                                                <i class="bi bi-file-text"></i> Полный отчет
+                                            </button>
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <button class="btn btn-outline-success w-100 report-type" 
+                                                    data-type="results" data-bs-toggle="tooltip" 
+                                                    title="Только итоговые результаты">
+                                                <i class="bi bi-trophy"></i> Итоги
+                                            </button>
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <button class="btn btn-outline-warning w-100 report-type" 
+                                                    data-type="protocol" data-bs-toggle="tooltip" 
+                                                    title="Официальный протокол для печати">
+                                                <i class="bi bi-printer"></i> Протокол
+                                            </button>
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <button class="btn btn-outline-info w-100 report-type" 
+                                                    data-type="categories" data-bs-toggle="tooltip" 
+                                                    title="Распределение по категориям">
+                                                <i class="bi bi-diagram-3"></i> По категориям
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <hr>
+                                    
+                                    <h6>Выберите формат:</h6>
+                                    <div class="row mt-3">
+                                        <div class="col-md-6 mb-2">
+                                            <button class="btn btn-success w-100 export-btn" 
+                                                    data-format="excel">
+                                                <i class="bi bi-file-earmark-excel"></i> Excel
+                                            </button>
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <button class="btn btn-danger w-100 export-btn" 
+                                                    data-format="pdf">
+                                                <i class="bi bi-file-earmark-pdf"></i> PDF
+                                            </button>
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <button class="btn btn-secondary w-100 export-btn" 
+                                                    data-format="html">
+                                                <i class="bi bi-file-earmark-text"></i> HTML
+                                            </button>
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <button class="btn btn-dark w-100 export-btn" 
+                                                    data-format="csv">
+                                                <i class="bi bi-filetype-csv"></i> CSV
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-4">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="includeCharts">
+                                            <label class="form-check-label" for="includeCharts">
+                                                Включить графики и диаграммы
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="includeDetails" checked>
+                                            <label class="form-check-label" for="includeDetails">
+                                                Включить детальную информацию
+                                            </label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="includeSignatures">
+                                            <label class="form-check-label" for="includeSignatures">
+                                                Включить подписи судей
+                                            </label>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mt-4">
+                                        <button id="generateReport" class="btn btn-primary w-100" disabled>
+                                            <i class="bi bi-gear"></i> Сформировать отчет
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div id="noSelection" class="text-center py-5">
+                            <i class="bi bi-mouse display-4 text-muted"></i>
+                            <p class="mt-3">Выберите соревнование для формирования отчета</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Предпросмотр отчета -->
+        <div class="card" id="previewSection" style="display: none;">
+            <div class="card-header bg-dark text-white">
+                <h5 class="mb-0">Предпросмотр отчета</h5>
+            </div>
+            <div class="card-body">
+                <div id="reportPreview" class="report-preview">
+                    <!-- Здесь будет предпросмотр отчета -->
+                </div>
+                <div class="mt-3 text-center">
+                    <button id="printPreview" class="btn btn-outline-primary">
+                        <i class="bi bi-printer"></i> Печать предпросмотра
+                    </button>
+                    <button id="downloadPreview" class="btn btn-outline-success">
+                        <i class="bi bi-download"></i> Скачать предпросмотр
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Шаблоны отчетов -->
+        <div class="card mt-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-card-checklist"></i> Шаблоны отчетов</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-file-text display-4 text-primary"></i>
+                                <h5 class="mt-3">Официальный протокол</h5>
+                                <p class="text-muted">Стандартный протокол для судейской коллегии</p>
+                                <button class="btn btn-outline-primary use-template" data-template="protocol">
+                                    Использовать
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-newspaper display-4 text-success"></i>
+                                <h5 class="mt-3">Для прессы</h5>
+                                <p class="text-muted">Краткий отчет с фото и комментариями</p>
+                                <button class="btn btn-outline-success use-template" data-template="press">
+                                    Использовать
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            <div class="card-body text-center">
+                                <i class="bi bi-graph-up display-4 text-warning"></i>
+                                <h5 class="mt-3">Статистический отчет</h5>
+                                <p class="text-muted">Детальная статистика и анализ результатов</p>
+                                <button class="btn btn-outline-warning use-template" data-template="stats">
+                                    Использовать
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.competition-item.active {
+    background-color: #e3f2fd;
+    border-color: #0d6efd;
+}
+
+.report-preview {
+    border: 1px solid #dee2e6;
+    border-radius: 5px;
+    padding: 20px;
+    background-color: white;
+    min-height: 300px;
+}
+
+.preview-header {
+    text-align: center;
+    border-bottom: 2px solid #333;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+.preview-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.preview-table th,
+.preview-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: center;
+}
+
+.preview-table th {
+    background-color: #f8f9fa;
+}
+</style>
+
+<script>
+let selectedCompetitionId = null;
+let selectedReportType = 'full';
+let selectedFormat = 'pdf';
+
+// Выбор соревнования
+document.querySelectorAll('.competition-item').forEach(item => {
+    item.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        // Удаляем активный класс у всех элементов
+        document.querySelectorAll('.competition-item').forEach(el => {
+            el.classList.remove('active');
+        });
+        
+        // Добавляем активный класс выбранному
+        this.classList.add('active');
+        
+        // Получаем данные
+        selectedCompetitionId = this.getAttribute('data-id');
+        const name = this.getAttribute('data-name');
+        const date = this.getAttribute('data-date');
+        const location = this.getAttribute('data-location');
+        const status = this.querySelector('.badge').textContent.trim();
+        
+        // Заполняем информацию
+        document.getElementById('selectedName').textContent = name;
+        document.getElementById('selectedDate').textContent = date;
+        document.getElementById('selectedLocation').textContent = location;
+        document.getElementById('selectedStatus').textContent = status;
+        
+        // Показываем панель выбора отчета
+        document.getElementById('competitionInfo').classList.remove('d-none');
+        document.getElementById('noSelection').style.display = 'none';
+        document.getElementById('generateReport').disabled = false;
+        
+        // Обновляем предпросмотр
+        updatePreview();
+    });
+});
+
+// Выбор типа отчета
+document.querySelectorAll('.report-type').forEach(button => {
+    button.addEventListener('click', function() {
+        // Удаляем активный класс у всех кнопок
+        document.querySelectorAll('.report-type').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        // Добавляем активный класс выбранной
+        this.classList.add('active');
+        selectedReportType = this.getAttribute('data-type');
+        
+        // Обновляем предпросмотр
+        updatePreview();
+    });
+});
+
+// Выбор формата
+document.querySelectorAll('.export-btn').forEach(button => {
+    button.addEventListener('click', function() {
+        // Удаляем активный класс у всех кнопок
+        document.querySelectorAll('.export-btn').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        
+        // Добавляем активный класс выбранной
+        this.classList.add('active');
+        selectedFormat = this.getAttribute('data-format');
+        
+        // Активируем кнопку формирования
+        document.getElementById('generateReport').disabled = false;
+    });
+});
+
+// Использование шаблона
+document.querySelectorAll('.use-template').forEach(button => {
+    button.addEventListener('click', function() {
+        const template = this.getAttribute('data-template');
+        alert(`Шаблон "${template}" выбран. Настройки применены.`);
+        
+        // Здесь можно добавить логику применения шаблона
+    });
+});
+
+// Формирование отчета
+document.getElementById('generateReport').addEventListener('click', function() {
+    if (!selectedCompetitionId) {
+        alert('Выберите соревнование!');
+        return;
+    }
+    
+    // Показываем предпросмотр
+    document.getElementById('previewSection').style.display = 'block';
+    
+    // Прокручиваем к предпросмотру
+    document.getElementById('previewSection').scrollIntoView({ behavior: 'smooth' });
+    
+    // В реальном приложении здесь будет AJAX запрос для формирования отчета
+    console.log(`Формируем отчет: competition=${selectedCompetitionId}, type=${selectedReportType}, format=${selectedFormat}`);
+    
+    // Показываем сообщение об успехе
+    showSuccessMessage();
+});
+
+// Обновление предпросмотра
+function updatePreview() {
+    if (!selectedCompetitionId) return;
+    
+    const preview = document.getElementById('reportPreview');
+    
+    // В реальном приложении здесь будет загрузка данных с сервера
+    const previewHTML = `
+        <div class="preview-header">
+            <h3>${document.getElementById('selectedName').textContent}</h3>
+            <p>Дата: ${document.getElementById('selectedDate').textContent} | 
+               Место: ${document.getElementById('selectedLocation').textContent}</p>
+            <p><strong>Тип отчета:</strong> ${getReportTypeName(selectedReportType)}</p>
+        </div>
+        
+        <div class="preview-content">
+            <h5>Итоговые результаты</h5>
+            <table class="preview-table">
+                <thead>
+                    <tr>
+                        <th>Место</th>
+                        <th>Спортсмен</th>
+                        <th>Клуб</th>
+                        <th>Категория</th>
+                        <th>Балл</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td>1</td><td>Иванов И.</td><td>Спартак</td><td>Мужчины 18+</td><td>9.85</td></tr>
+                    <tr><td>2</td><td>Петрова А.</td><td>Динамо</td><td>Женщины 18+</td><td>9.72</td></tr>
+                    <tr><td>3</td><td>Сидоров С.</td><td>Локомотив</td><td>Мужчины 18+</td><td>9.68</td></tr>
+                    <tr><td>4</td><td>Козлова М.</td><td>ЦСКА</td><td>Женщины 18+</td><td>9.65</td></tr>
+                    <tr><td>5</td><td>Смирнов П.</td><td>Спартак</td><td>Мужчины 18+</td><td>9.60</td></tr>
+                </tbody>
+            </table>
+            
+            <div class="mt-4">
+                <p><strong>Формат вывода:</strong> ${selectedFormat.toUpperCase()}</p>
+                <p><strong>Включено:</strong> 
+                    ${document.getElementById('includeCharts').checked ? 'Графики, ' : ''}
+                    ${document.getElementById('includeDetails').checked ? 'Детали, ' : ''}
+                    ${document.getElementById('includeSignatures').checked ? 'Подписи' : ''}
+                </p>
+            </div>
+        </div>
+    `;
+    
+    preview.innerHTML = previewHTML;
+}
+
+function getReportTypeName(type) {
+    const types = {
+        'full': 'Полный отчет',
+        'results': 'Итоговые результаты',
+        'protocol': 'Официальный протокол',
+        'categories': 'Распределение по категориям'
+    };
+    return types[type] || type;
+}
+
+function showSuccessMessage() {
+    const alert = document.createElement('div');
+    alert.className = 'alert alert-success alert-dismissible fade show mt-3';
+    alert.innerHTML = `
+        <i class="bi bi-check-circle"></i>
+        Отчет успешно сформирован! 
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.getElementById('previewSection').querySelector('.card-body').appendChild(alert);
+    
+    // Автоматическое скрытие через 5 секунд
+    setTimeout(() => {
+        alert.remove();
+    }, 5000);
+}
+
+// Печать предпросмотра
+document.getElementById('printPreview').addEventListener('click', function() {
+    window.print();
+});
+
+// Скачивание предпросмотра
+document.getElementById('downloadPreview').addEventListener('click', function() {
+    // В реальном приложении здесь будет загрузка файла
+    alert('Функция скачивания будет реализована в следующей версии');
+});
+
+// Инициализация tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %}

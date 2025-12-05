@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="mb-4">
+        <i class="bi bi-tags-fill"></i> Управление категориями
+    </h2>
+    
+    <!-- Форма создания категории -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">Создать новую категорию</h5>
+        </div>
+        <div class="card-body">
+            <form method="POST" action="{{ url_for('manage_categories', id = competition.id) }}">
+                {{ form.hidden_tag() }}
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label">{{ form.name.label }}</label>
+                        {{ form.name(class="form-control", placeholder="Например: Юноши 14-16 лет") }}
+                        {% if form.name.errors %}
+                            <div class="text-danger">
+                                {% for error in form.name.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">{{ form.gender.label }}</label>
+                        {{ form.gender(class="form-select") }}
+                        {% if form.gender.errors %}
+                            <div class="text-danger">
+                                {% for error in form.gender.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label">{{ form.min_age.label }}</label>
+                        {{ form.min_age(class="form-control", placeholder="14") }}
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label class="form-label">{{ form.max_age.label }}</label>
+                        {{ form.max_age(class="form-control", placeholder="16") }}
+                    </div>
+                    
+                </div>
+                
+                <div class="d-grid">
+                    {{ form.submit(class="btn btn-primary btn-lg") }}
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Существующие категории -->
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">
+                Существующие категории
+                <span class="badge bg-light text-dark float-end">{{ categories|length }}</span>
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if categories %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Название</th>
+                                <th>Пол</th>
+                                <th>Возраст</th>
+                                <th>Дата создания</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for category in categories %}
+                            <tr>
+                                <td><strong>{{ category.name }}</strong></td>
+                                <td>
+                                    {% if category.gender == 'М' %}
+                                        <span class="badge bg-primary">Мужской</span>
+                                    {% elif category.gender == 'Ж' %}
+                                        <span class="badge bg-danger">Женский</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Любой</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if category.min_age or category.max_age %}
+                                        {{ category.min_age or '?' }} - {{ category.max_age or '?' }} лет
+                                    {% else %}
+                                        <span class="text-muted">Не ограничено</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ category.created_at.strftime('%d.%m.%Y') if category.created_at else '—' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-tag display-4 text-muted"></i>
+                    <p class="mt-3">Категории еще не созданы</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Распределение спортсменов -->
+    <div class="card">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0">Распределение спортсменов по категориям</h5>
+        </div>
+        <div class="card-body">
+            {% if athletes %}
+                <div class="row">
+                    {% for category_name, athletes_list in categorized.items() %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6 class="mb-0">
+                                    {{ category_name }}
+                                    <span class="badge bg-primary float-end">{{ athletes_list|length }}</span>
+                                </h6>
+                            </div>
+                            <div class="card-body" style="max-height: 200px; overflow-y: auto;">
+                                <ul class="list-group list-group-flush">
+                                    {% for athlete in athletes_list %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        {{ athlete.last_name }} {{ athlete.first_name }}
+                                        <small class="text-muted">{{ athlete.club or '—' }}</small>
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="bi bi-person-slash display-4 text-muted"></i>
+                    <p class="mt-3">Спортсменов нет</p>
+                    <a href="{{ url_for('upload_athletes') }}" class="btn btn-primary">
+                        <i class="bi bi-upload"></i> Загрузить спортсменов
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
